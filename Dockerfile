@@ -15,6 +15,9 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY src/ src/
 COPY config.yaml .
 
+# Timezone — markets operate on Eastern Time
+ENV TZ=America/New_York
+
 # Dashboard port
 ENV PORT=8000
 EXPOSE 8000

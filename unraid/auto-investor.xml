@@ -90,4 +90,13 @@
     Display="advanced"
     Required="false"
     Mask="false"/>
+  <Config
+    Name="Timezone"
+    Target="TZ"
+    Default="America/New_York"
+    Description="Container timezone (default: Eastern for US markets)"
+    Type="Variable"
+    Display="advanced"
+    Required="false"
+    Mask="false"/>
 </Container>

@@ -151,6 +151,7 @@ On Unraid, the default host path is `/mnt/user/appdata/auto-investor` — this i
 | `ALPACA_SECRET_KEY` | Yes | Alpaca paper trading secret key |
 | `ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude |
 | `PORT` | No | Dashboard port (default: `8000`) |
+| `TZ` | No | Container timezone (default: `America/New_York`) |
 
 ## Safety
 
