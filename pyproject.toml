@@ -1,6 +1,6 @@
 [project]
 name = "auto-investor"
-version = "0.1.6"
+version = "0.1.7"
 description = "AI-driven automated trading bot using Claude + Alpaca"
 readme = "README.md"
 requires-python = ">=3.12"
