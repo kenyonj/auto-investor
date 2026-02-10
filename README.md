@@ -122,6 +122,36 @@ All data updates in real-time via WebSocket — no page refresh needed.
 - **Daily trade cap**: Configurable maximum orders per day
 - **Cash reserve**: Optional minimum cash percentage
 
+## Docker / Unraid
+
+The Docker image is published to `ghcr.io/kenyonj/auto-investor:latest` and auto-built on every push to `main`.
+
+```bash
+docker run -d \
+  -e ALPACA_API_KEY=your_paper_key \
+  -e ALPACA_SECRET_KEY=your_paper_secret \
+  -e ANTHROPIC_API_KEY=your_key \
+  -v /path/to/data:/app/data \
+  -v /path/to/config.yaml:/app/config.yaml \
+  -p 8000:8000 \
+  ghcr.io/kenyonj/auto-investor:latest
+```
+
+### Data Persistence
+
+The SQLite database is stored at `/app/data/auto_investor.db` inside the container. **Mount a host directory to `/app/data`** to persist your trading history, decisions, and equity snapshots across container restarts and image updates.
+
+On Unraid, the default host path is `/mnt/user/appdata/auto-investor` — this is pre-configured in the Community Apps template.
+
+### Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `ALPACA_API_KEY` | Yes | Alpaca paper trading API key |
+| `ALPACA_SECRET_KEY` | Yes | Alpaca paper trading secret key |
+| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude |
+| `PORT` | No | Dashboard port (default: `8000`) |
+
 ## Safety
 
 - All AI decisions are logged with full reasoning to SQLite
