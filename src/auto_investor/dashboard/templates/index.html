@@ -286,40 +286,45 @@
     </div>
     {% endif %}
 
-    {% if equity_history|length > 1 %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
     <script>
-        const ctx = document.getElementById('equityChart').getContext('2d');
-        window._equityChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [{% for e in equity_history %}"{{ e['timestamp'][:16].replace('T', ' ') }}"{{ "," if not loop.last }}{% endfor %}],
-                datasets: [{
-                    label: 'Equity',
-                    data: [{% for e in equity_history %}{{ e['equity'] }}{{ "," if not loop.last }}{% endfor %}],
-                    borderColor: '#58a6ff',
-                    backgroundColor: 'rgba(88, 166, 255, 0.1)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 2,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { ticks: { color: '#8b949e', maxTicksLimit: 10 }, grid: { color: '#21262d' } },
-                    y: { ticks: { color: '#8b949e', callback: v => '$' + v.toLocaleString() }, grid: { color: '#21262d' } }
+        function _createEquityChart(labels, data) {
+            const ctx = document.getElementById('equityChart').getContext('2d');
+            window._equityChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Equity',
+                        data: data,
+                        borderColor: '#58a6ff',
+                        backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#8b949e', maxTicksLimit: 10 }, grid: { color: '#21262d' } },
+                        y: { ticks: { color: '#8b949e', callback: v => '$' + v.toLocaleString() }, grid: { color: '#21262d' } }
+                    }
                 }
-            }
-        });
-        window._lastEquity = window._equityChart.data.datasets[0].data.slice(-1)[0] || 0;
+            });
+        }
+        {% if equity_history|length > 1 %}
+        _createEquityChart(
+            [{% for e in equity_history %}"{{ e['timestamp'][:16].replace('T', ' ') }}"{{ "," if not loop.last }}{% endfor %}],
+            [{% for e in equity_history %}{{ e['equity'] }}{{ "," if not loop.last }}{% endfor %}]
+        );
+        {% else %}
+        window._equityChart = null;
+        {% endif %}
+        window._lastEquity = window._equityChart ? window._equityChart.data.datasets[0].data.slice(-1)[0] : 0;
     </script>
-    {% else %}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-    <script>window._equityChart = null; window._lastEquity = 0;</script>
-    {% endif %}
     <script>
         async function forceCycle() {
             if (!confirm('⚠️ This will run a full trading cycle immediately and may execute real trades. Continue?')) return;
@@ -385,13 +390,20 @@
                             crPl.className = 'value ' + (msg.crypto_pl >= 0 ? 'positive' : 'negative');
                         }
                         // Append to chart when equity changes
-                        if (window._equityChart && Math.abs(msg.equity - window._lastEquity) > 0.01) {
-                            const now = new Date();
-                            const label = now.toISOString().slice(0, 16).replace('T', ' ');
-                            window._equityChart.data.labels.push(label);
-                            window._equityChart.data.datasets[0].data.push(msg.equity);
-                            window._equityChart.update('none');
-                            window._lastEquity = msg.equity;
+                        if (msg.equity > 0) {
+                            if (!window._equityChart) {
+                                const now = new Date();
+                                const label = now.toISOString().slice(0, 16).replace('T', ' ');
+                                _createEquityChart([label], [msg.equity]);
+                                window._lastEquity = msg.equity;
+                            } else if (Math.abs(msg.equity - window._lastEquity) > 0.01) {
+                                const now = new Date();
+                                const label = now.toISOString().slice(0, 16).replace('T', ' ');
+                                window._equityChart.data.labels.push(label);
+                                window._equityChart.data.datasets[0].data.push(msg.equity);
+                                window._equityChart.update('none');
+                                window._lastEquity = msg.equity;
+                            }
                         }
                     }
 
