@@ -39,8 +39,14 @@ TECHNICAL INDICATORS (computed from 35-day history):
 - MACD: Bullish when MACD line > signal line (positive histogram). Bearish when below. Crossovers are key signals.
 - SMA (10/20): Price above SMA = bullish trend. Below = bearish. SMA crossovers (10 crossing 20) signal trend changes.
 - Bollinger Bands: Price near upper band = potentially overbought. Near lower band = potentially oversold. Squeeze (narrow bands) = breakout imminent.
+- VWAP: Institutional benchmark. Price above VWAP = bullish bias, below = bearish. Reliable for intraday direction.
+- ATR: Measures volatility. High ATR = volatile (use smaller positions, wider stops). Low ATR = calm (tighter stops, larger positions).
+- Volume ratio: Current volume vs 20-day average. 2x+ = surge (confirms moves). Below 0.5x = low conviction.
+- Range position: Where price sits in its recent high/low range. Near high (90%+) = momentum play. Near low (10%-) = contrarian opportunity.
+- Gap detection: Opening gaps of 1%+ signal strong sentiment. Gap-ups on volume = continuation. Gap-downs = caution.
+- Streak: Consecutive up/down days. 5+ days in one direction = mean reversion likely.
 - Use indicators to CONFIRM price action — don't trade on a single indicator alone.
-- When multiple indicators align (e.g., RSI oversold + MACD bullish crossover + price at BB lower), that's a strong signal.
+- When multiple indicators align (e.g., RSI oversold + MACD crossover + volume surge + near range low), that's a strong signal.
 
 NEWS & SENTIMENT:
 - Recent positive news = tailwind. Consider buying or holding.
