@@ -174,5 +174,16 @@ class DataStore:
             return {"timestamp": row[0], "loss": row[1]}
         return None
 
+    def get_last_buy_time(self, symbol: str) -> datetime | None:
+        """Get the timestamp of the most recent executed BUY for a symbol."""
+        row = self.conn.execute(
+            "SELECT timestamp FROM executions WHERE symbol = ? AND side = 'buy' "
+            "ORDER BY timestamp DESC LIMIT 1",
+            (symbol,),
+        ).fetchone()
+        if row:
+            return datetime.fromisoformat(row[0])
+        return None
+
     def close(self):
         self.conn.close()

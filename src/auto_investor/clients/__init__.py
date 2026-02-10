@@ -142,10 +142,14 @@ class AlpacaClient:
             request = StockLatestQuoteRequest(symbol_or_symbols=stock_syms)
             quotes = self.data.get_stock_latest_quote(request)
             for symbol, quote in quotes.items():
+                # Use mid-price for more accurate P&L (avoid ask-side bias)
+                bid = float(quote.bid_price)
+                ask = float(quote.ask_price)
+                mid = (bid + ask) / 2 if bid > 0 and ask > 0 else ask
                 results.append(
                     MarketQuote(
                         symbol=symbol,
-                        price=float(quote.ask_price),
+                        price=mid,
                         change=0,
                         change_pct=0,
                         volume=0,
@@ -157,10 +161,13 @@ class AlpacaClient:
             request = CryptoLatestQuoteRequest(symbol_or_symbols=crypto_syms)
             quotes = self.crypto_data.get_crypto_latest_quote(request)
             for symbol, quote in quotes.items():
+                bid = float(quote.bid_price)
+                ask = float(quote.ask_price)
+                mid = (bid + ask) / 2 if bid > 0 and ask > 0 else ask
                 results.append(
                     MarketQuote(
                         symbol=symbol,
-                        price=float(quote.ask_price),
+                        price=mid,
                         change=0,
                         change_pct=0,
                         volume=0,

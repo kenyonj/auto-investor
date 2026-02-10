@@ -1,9 +1,12 @@
 """Risk management engine — guardrails for AI trade decisions."""
 
+from datetime import datetime, timedelta
+
 from auto_investor.config import RiskConfig
 from auto_investor.models import Action, PortfolioSnapshot, TradeDecision
 
 WASH_SALE_DAYS = 30
+MIN_HOLD_MINUTES = 30
 
 
 class RiskManager:
@@ -134,6 +137,20 @@ class RiskManager:
             return True, f"No position in {decision.symbol} to sell"
         if decision.quantity and decision.quantity > existing.quantity:
             return True, f"Sell qty ({decision.quantity}) > position ({existing.quantity})"
+
+        # Minimum hold period: don't sell within MIN_HOLD_MINUTES of buying
+        if self.store:
+            last_buy = self.store.get_last_buy_time(decision.symbol)
+            if last_buy:
+                held_for = datetime.now() - last_buy
+                if held_for < timedelta(minutes=MIN_HOLD_MINUTES):
+                    mins_left = MIN_HOLD_MINUTES - int(held_for.total_seconds() / 60)
+                    return (
+                        True,
+                        f"Min hold period: bought {int(held_for.total_seconds() / 60)}m ago, "
+                        f"wait {mins_left}m more",
+                    )
+
         return False, ""
 
     def reset_daily(self):
