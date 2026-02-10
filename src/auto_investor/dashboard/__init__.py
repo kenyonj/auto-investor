@@ -252,12 +252,10 @@ def index(request: Request):
     equity_positions = [p for p in positions if p.get("asset_class", "us_equity") != "crypto"]
     crypto_positions = [p for p in positions if p.get("asset_class") == "crypto"]
 
-    # Paginated decisions
-    per_page = int(request.query_params.get("per_page", 10))
-    page = int(request.query_params.get("page", 1))
-    per_page = max(1, min(per_page, 100))
-    page = max(1, page)
-    offset = (page - 1) * per_page
+    # Paginated decisions (always start at page 1; AJAX handles navigation)
+    per_page = 10
+    page = 1
+    offset = 0
 
     total_decisions = db.execute("SELECT COUNT(*) as cnt FROM decisions").fetchone()["cnt"]
     decisions = db.execute(
@@ -265,12 +263,10 @@ def index(request: Request):
     ).fetchall()
     total_pages = max(1, (total_decisions + per_page - 1) // per_page)
 
-    # Paginated executions
-    exec_per_page = int(request.query_params.get("exec_per_page", 10))
-    exec_page = int(request.query_params.get("exec_page", 1))
-    exec_per_page = max(1, min(exec_per_page, 100))
-    exec_page = max(1, exec_page)
-    exec_offset = (exec_page - 1) * exec_per_page
+    # Paginated executions (always start at page 1; AJAX handles navigation)
+    exec_per_page = 10
+    exec_page = 1
+    exec_offset = 0
 
     total_executions = db.execute(
         "SELECT COUNT(*) as cnt FROM executions"
