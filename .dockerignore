@@ -7,4 +7,5 @@ __pycache__
 .pytest_cache
 auto_investor.db
 tests/
-*.md
+CHANGELOG.md
+CONTRIBUTING.md
