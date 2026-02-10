@@ -152,7 +152,7 @@
         Recent Decisions
         <span style="font-size:0.75rem; font-weight:400; color:#8b949e;">
             Show
-            <select id="per-page-select" onchange="location.href='/?per_page='+this.value+'&page=1&exec_page={{ exec_page }}&exec_per_page={{ exec_per_page }}'" style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 6px;font-size:0.75rem;">
+            <select id="dec-per-page" style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 6px;font-size:0.75rem;">
                 {% for n in [5, 10, 25, 50] %}
                 <option value="{{ n }}" {{ 'selected' if per_page == n else '' }}>{{ n }}</option>
                 {% endfor %}
@@ -160,6 +160,7 @@
             per page
         </span>
     </h2>
+    <div id="decisions-container">
     {% if decisions %}
     <table>
         <thead>
@@ -173,7 +174,7 @@
                 <th>Status</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="decisions-body">
             {% for d in decisions %}
             <tr class="clickable" onclick="showDecision({{ d['id'] }})">
                 <td class="timestamp">{{ d["timestamp"][:16].replace("T", " ") }}</td>
@@ -193,15 +194,15 @@
             {% endfor %}
         </tbody>
     </table>
-    <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:24px; font-size:0.85rem;">
+    <div id="dec-pagination" style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:24px; font-size:0.85rem;">
         {% if page > 1 %}
-        <a href="/?page={{ page - 1 }}&per_page={{ per_page }}&exec_page={{ exec_page }}&exec_per_page={{ exec_per_page }}" style="color:#58a6ff; text-decoration:none;">← Prev</a>
+        <a href="#" onclick="loadDecisions({{ page - 1 }});return false" style="color:#58a6ff; text-decoration:none;">← Prev</a>
         {% else %}
         <span style="color:#484f58;">← Prev</span>
         {% endif %}
         <span style="color:#8b949e;">Page {{ page }} of {{ total_pages }} ({{ total_decisions }} total)</span>
         {% if page < total_pages %}
-        <a href="/?page={{ page + 1 }}&per_page={{ per_page }}&exec_page={{ exec_page }}&exec_per_page={{ exec_per_page }}" style="color:#58a6ff; text-decoration:none;">Next →</a>
+        <a href="#" onclick="loadDecisions({{ page + 1 }});return false" style="color:#58a6ff; text-decoration:none;">Next →</a>
         {% else %}
         <span style="color:#484f58;">Next →</span>
         {% endif %}
@@ -209,13 +210,14 @@
     {% else %}
     <div class="empty">No decisions yet — run a cycle first</div>
     {% endif %}
+    </div>
 
     {% if executions %}
     <h2 style="display:flex; align-items:center; justify-content:space-between;">
         Recent Executions
         <span style="font-size:0.75rem; font-weight:400; color:#8b949e;">
             Show
-            <select onchange="location.href='/?page={{ page }}&per_page={{ per_page }}&exec_per_page='+this.value+'&exec_page=1'" style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 6px;font-size:0.75rem;">
+            <select id="exec-per-page" style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 6px;font-size:0.75rem;">
                 {% for n in [5, 10, 25, 50] %}
                 <option value="{{ n }}" {{ 'selected' if exec_per_page == n else '' }}>{{ n }}</option>
                 {% endfor %}
@@ -223,6 +225,7 @@
             per page
         </span>
     </h2>
+    <div id="executions-container">
     <table>
         <thead>
             <tr>
@@ -236,7 +239,7 @@
                 <th>Order ID</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="executions-body">
             {% for e in executions %}
             <tr>
                 <td class="timestamp">{{ e["timestamp"][:16].replace("T", " ") }}</td>
@@ -269,18 +272,19 @@
             {% endfor %}
         </tbody>
     </table>
-    <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:24px; font-size:0.85rem;">
+    <div id="exec-pagination" style="display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:24px; font-size:0.85rem;">
         {% if exec_page > 1 %}
-        <a href="/?page={{ page }}&per_page={{ per_page }}&exec_page={{ exec_page - 1 }}&exec_per_page={{ exec_per_page }}" style="color:#58a6ff; text-decoration:none;">← Prev</a>
+        <a href="#" onclick="loadExecutions({{ exec_page - 1 }});return false" style="color:#58a6ff; text-decoration:none;">← Prev</a>
         {% else %}
         <span style="color:#484f58;">← Prev</span>
         {% endif %}
         <span style="color:#8b949e;">Page {{ exec_page }} of {{ exec_total_pages }} ({{ total_executions }} total)</span>
         {% if exec_page < exec_total_pages %}
-        <a href="/?page={{ page }}&per_page={{ per_page }}&exec_page={{ exec_page + 1 }}&exec_per_page={{ exec_per_page }}" style="color:#58a6ff; text-decoration:none;">Next →</a>
+        <a href="#" onclick="loadExecutions({{ exec_page + 1 }});return false" style="color:#58a6ff; text-decoration:none;">Next →</a>
         {% else %}
         <span style="color:#484f58;">Next →</span>
         {% endif %}
+    </div>
     </div>
     {% endif %}
 

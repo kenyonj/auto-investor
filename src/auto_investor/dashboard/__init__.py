@@ -122,6 +122,118 @@ def _get_decision_count() -> int:
         return -1
 
 
+def _enrich_executions(executions: list[dict]) -> list[dict]:
+    """Enrich execution dicts with live fill data and transaction amounts."""
+    if _alpaca_client:
+        update_db = _get_db()
+        for e in executions:
+            oid = e.get("order_id")
+            if not oid:
+                continue
+            if e.get("filled_avg_price") and e.get("filled_qty"):
+                continue
+            try:
+                info = _alpaca_client.get_order_details(oid)
+                if info:
+                    if info.get("status"):
+                        e["status"] = info["status"]
+                    if info.get("filled_avg_price"):
+                        e["filled_avg_price"] = info["filled_avg_price"]
+                    if info.get("filled_qty"):
+                        e["filled_qty"] = info["filled_qty"]
+                    if info.get("filled_avg_price") and info.get("filled_qty"):
+                        update_db.execute(
+                            "UPDATE executions SET status=?, filled_avg_price=?,"
+                            " filled_qty=? WHERE order_id=?",
+                            (info["status"], info["filled_avg_price"],
+                             info["filled_qty"], oid),
+                        )
+                        update_db.commit()
+            except Exception:
+                pass
+        update_db.close()
+
+    unfilled_symbols = {
+        e["symbol"] for e in executions
+        if not (e.get("filled_avg_price") and e.get("filled_qty"))
+        and e.get("quantity") and e.get("symbol")
+    }
+    quote_prices: dict[str, float] = {}
+    if unfilled_symbols and _alpaca_client:
+        try:
+            quotes = _alpaca_client.get_quotes(list(unfilled_symbols))
+            for q in quotes:
+                quote_prices[q.symbol] = q.price
+        except Exception:
+            pass
+    for e in executions:
+        price = e.get("filled_avg_price")
+        qty = e.get("filled_qty")
+        if price and qty:
+            e["txn_amount"] = float(price) * float(qty)
+            e["txn_estimated"] = False
+        elif e.get("quantity") and e.get("symbol"):
+            qp = quote_prices.get(e["symbol"])
+            if qp:
+                e["txn_amount"] = float(e["quantity"]) * qp
+                e["txn_estimated"] = True
+            else:
+                e["txn_amount"] = None
+                e["txn_estimated"] = False
+        else:
+            e["txn_amount"] = None
+            e["txn_estimated"] = False
+    return executions
+
+
+@app.get("/api/decisions")
+def api_decisions(request: Request):
+    """JSON endpoint for paginated decisions."""
+    db = _get_db()
+    per_page = max(1, min(int(request.query_params.get("per_page", 10)), 100))
+    page = max(1, int(request.query_params.get("page", 1)))
+    offset = (page - 1) * per_page
+    total = db.execute("SELECT COUNT(*) as cnt FROM decisions").fetchone()["cnt"]
+    rows = db.execute(
+        "SELECT * FROM decisions ORDER BY id DESC LIMIT ? OFFSET ?", (per_page, offset)
+    ).fetchall()
+    db.close()
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    return {
+        "decisions": [dict(r) for r in rows],
+        "page": page,
+        "per_page": per_page,
+        "total_pages": total_pages,
+        "total": total,
+    }
+
+
+@app.get("/api/executions")
+def api_executions(request: Request):
+    """JSON endpoint for paginated executions."""
+    db = _get_db()
+    per_page = max(1, min(int(request.query_params.get("per_page", 10)), 100))
+    page = max(1, int(request.query_params.get("page", 1)))
+    offset = (page - 1) * per_page
+    total = db.execute("SELECT COUNT(*) as cnt FROM executions").fetchone()["cnt"]
+    rows = db.execute(
+        "SELECT e.*, d.action, d.confidence, d.reasoning "
+        "FROM executions e "
+        "LEFT JOIN decisions d ON e.decision_id = d.id "
+        "ORDER BY e.id DESC LIMIT ? OFFSET ?",
+        (per_page, offset),
+    ).fetchall()
+    db.close()
+    executions = _enrich_executions([dict(r) for r in rows])
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    return {
+        "executions": executions,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": total_pages,
+        "total": total,
+    }
+
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
@@ -170,73 +282,7 @@ def index(request: Request):
         "ORDER BY e.id DESC LIMIT ? OFFSET ?",
         (exec_per_page, exec_offset),
     ).fetchall()
-    # Convert to dicts so we can enrich with live fill data
-    executions = [dict(e) for e in executions]
-
-    # Enrich with live fill data from Alpaca
-    if _alpaca_client:
-        update_db = _get_db()
-        for e in executions:
-            oid = e.get("order_id")
-            if not oid:
-                continue
-            # Skip orders already filled in the DB
-            if e.get("filled_avg_price") and e.get("filled_qty"):
-                continue
-            try:
-                info = _alpaca_client.get_order_details(oid)
-                if info:
-                    if info.get("status"):
-                        e["status"] = info["status"]
-                    if info.get("filled_avg_price"):
-                        e["filled_avg_price"] = info["filled_avg_price"]
-                    if info.get("filled_qty"):
-                        e["filled_qty"] = info["filled_qty"]
-                    # Persist fill data so we don't re-fetch next time
-                    if info.get("filled_avg_price") and info.get("filled_qty"):
-                        update_db.execute(
-                            "UPDATE executions SET status=?, filled_avg_price=?,"
-                            " filled_qty=? WHERE order_id=?",
-                            (info["status"], info["filled_avg_price"],
-                             info["filled_qty"], oid),
-                        )
-                        update_db.commit()
-            except Exception:
-                pass
-        update_db.close()
-
-    # Compute transaction amount for display
-    # Batch-fetch quotes for unfilled executions
-    unfilled_symbols = {
-        e["symbol"] for e in executions
-        if not (e.get("filled_avg_price") and e.get("filled_qty"))
-        and e.get("quantity") and e.get("symbol")
-    }
-    quote_prices: dict[str, float] = {}
-    if unfilled_symbols and _alpaca_client:
-        try:
-            quotes = _alpaca_client.get_quotes(list(unfilled_symbols))
-            for q in quotes:
-                quote_prices[q.symbol] = q.price
-        except Exception:
-            pass
-    for e in executions:
-        price = e.get("filled_avg_price")
-        qty = e.get("filled_qty")
-        if price and qty:
-            e["txn_amount"] = float(price) * float(qty)
-            e["txn_estimated"] = False
-        elif e.get("quantity") and e.get("symbol"):
-            qp = quote_prices.get(e["symbol"])
-            if qp:
-                e["txn_amount"] = float(e["quantity"]) * qp
-                e["txn_estimated"] = True
-            else:
-                e["txn_amount"] = None
-                e["txn_estimated"] = False
-        else:
-            e["txn_amount"] = None
-            e["txn_estimated"] = False
+    executions = _enrich_executions([dict(e) for e in executions])
 
     exec_total_pages = max(1, (total_executions + exec_per_page - 1) // exec_per_page)
 
