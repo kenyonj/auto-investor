@@ -89,6 +89,18 @@ def main():
             return nxt.timestamp()
 
         def guarded_cycle():
+            from auto_investor.dashboard import is_hold_all
+
+            if is_hold_all():
+                console.print("[yellow]⏸ HOLD ALL active — skipping AI analysis[/yellow]")
+                # Still log portfolio snapshot for tracking
+                try:
+                    portfolio = engine.alpaca.get_portfolio_snapshot()
+                    engine.store.log_snapshot(portfolio)
+                except Exception:
+                    pass
+                return
+
             now = datetime.now()
             is_weekday = now.weekday() < 5
             market_open = now.replace(hour=open_h, minute=open_m, second=0)

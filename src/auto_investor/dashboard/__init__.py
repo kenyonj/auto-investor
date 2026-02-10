@@ -26,6 +26,7 @@ _first_cycle_at: float | None = None
 _alpaca_client = None
 _run_cycle_fn = None
 _ws_clients: list[WebSocket] = []
+_hold_all: bool = False
 
 
 def set_first_cycle_time(t: float | None) -> None:
@@ -359,6 +360,7 @@ def index(request: Request):
             "exec_per_page": exec_per_page,
             "exec_total_pages": exec_total_pages,
             "total_executions": total_executions,
+            "hold_all": _hold_all,
         },
     )
 
@@ -431,3 +433,28 @@ def api_force_cycle():
 
     threading.Thread(target=_run_cycle_fn, daemon=True).start()
     return {"status": "started"}
+
+
+def is_hold_all() -> bool:
+    """Check if HOLD ALL mode is active."""
+    return _hold_all
+
+
+@app.post("/api/hold-all")
+def api_hold_all():
+    """Toggle HOLD ALL mode — pauses AI analysis while keeping position updates."""
+    global _hold_all
+    _hold_all = not _hold_all
+    return {"hold_all": _hold_all}
+
+
+@app.post("/api/sell-all")
+def api_sell_all():
+    """Close all open positions immediately."""
+    if _alpaca_client is None:
+        return {"error": "no client configured"}
+    try:
+        results = _alpaca_client.close_all_positions()
+        return {"status": "ok", "closed": results}
+    except Exception as e:
+        return {"error": str(e)}

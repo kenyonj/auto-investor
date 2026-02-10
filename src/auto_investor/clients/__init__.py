@@ -416,3 +416,23 @@ class AlpacaClient:
             "filled_avg_price": float(order.filled_avg_price) if order.filled_avg_price else None,
             "filled_qty": float(order.filled_qty) if order.filled_qty else None,
         }
+
+    def close_all_positions(self) -> list[dict]:
+        """Close all open positions. Returns list of closed position details."""
+        results = []
+        positions = self.trading.get_all_positions()
+        for pos in positions:
+            try:
+                self.trading.close_position(pos.asset_id)
+                results.append({
+                    "symbol": self.normalize_symbol(pos.symbol),
+                    "qty": str(pos.qty),
+                    "status": "closing",
+                })
+            except Exception as e:
+                results.append({
+                    "symbol": self.normalize_symbol(pos.symbol),
+                    "qty": str(pos.qty),
+                    "status": f"error: {e}",
+                })
+        return results
