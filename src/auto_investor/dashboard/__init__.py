@@ -27,6 +27,7 @@ _alpaca_client = None
 _run_cycle_fn = None
 _ws_clients: list[WebSocket] = []
 _hold_all: bool = False
+_pause_ai: bool = False
 
 
 def set_first_cycle_time(t: float | None) -> None:
@@ -361,6 +362,7 @@ def index(request: Request):
             "exec_total_pages": exec_total_pages,
             "total_executions": total_executions,
             "hold_all": _hold_all,
+            "pause_ai": _pause_ai,
         },
     )
 
@@ -440,12 +442,25 @@ def is_hold_all() -> bool:
     return _hold_all
 
 
+def is_pause_ai() -> bool:
+    """Check if Pause AI mode is active (rule-based only, no LLM calls)."""
+    return _pause_ai
+
+
 @app.post("/api/hold-all")
 def api_hold_all():
     """Toggle HOLD ALL mode — pauses AI analysis while keeping position updates."""
     global _hold_all
     _hold_all = not _hold_all
     return {"hold_all": _hold_all}
+
+
+@app.post("/api/pause-ai")
+def api_pause_ai():
+    """Toggle Pause AI mode — use rule-based analysis only, no LLM calls."""
+    global _pause_ai
+    _pause_ai = not _pause_ai
+    return {"pause_ai": _pause_ai}
 
 
 @app.post("/api/sell-all")

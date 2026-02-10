@@ -12,7 +12,7 @@ from auto_investor.clients.reddit import RedditClient
 from auto_investor.config import AppConfig, Secrets, load_config
 from auto_investor.data import DataStore
 from auto_investor.indicators import compute_indicators
-from auto_investor.models import Action
+from auto_investor.models import Action, Confidence, TradeDecision
 from auto_investor.risk import RiskManager
 
 console = Console()
@@ -63,7 +63,7 @@ class ExecutionEngine:
             if d.action == Action.HOLD:
                 self._hold_cooldowns[d.symbol] = now
 
-    def run_cycle(self, dry_run: bool = True, crypto: bool = False):
+    def run_cycle(self, dry_run: bool = True, crypto: bool = False, skip_ai: bool = False):
         """Run one full analysis → decision → execution cycle."""
         label = "Crypto" if crypto else "Equity"
         console.rule(f"[bold blue]Auto-Investor {label} Cycle")
@@ -151,14 +151,20 @@ class ExecutionEngine:
             console.print(f"  [dim]Could not fetch Reddit posts: {e}[/dim]")
             reddit_posts = []
 
-        # 5. AI analysis
-        console.print("[dim]Running AI analysis...[/dim]")
-        decisions = self.agent.analyze(
-            portfolio, quotes, watchlist,
-            bars=bars, news=news,
-            reddit_posts=reddit_posts,
-            indicators=indicators,
-        )
+        # 5. AI analysis (or rule-based fallback)
+        if skip_ai:
+            console.print("[yellow]🤖 AI paused — generating rule-based decisions[/yellow]")
+            decisions = self._rule_based_decisions(
+                watchlist, indicators, portfolio, quote_prices,
+            )
+        else:
+            console.print("[dim]Running AI analysis...[/dim]")
+            decisions = self.agent.analyze(
+                portfolio, quotes, watchlist,
+                bars=bars, news=news,
+                reddit_posts=reddit_posts,
+                indicators=indicators,
+            )
 
         # 6. Risk checks
         console.print("[dim]Applying risk checks...[/dim]")
@@ -233,3 +239,106 @@ class ExecutionEngine:
                         console.print(f"  [red]✗[/red] {d.symbol}: {e}")
 
         console.rule(f"[bold blue]{label} Cycle Complete")
+
+    def _rule_based_decisions(
+        self,
+        watchlist: list[str],
+        indicators: dict[str, dict[str, str]],
+        portfolio,
+        quote_prices: dict[str, float],
+    ) -> list[TradeDecision]:
+        """Generate trade decisions from technical indicators only (no LLM)."""
+        decisions: list[TradeDecision] = []
+        held_symbols = {p.symbol for p in portfolio.positions}
+
+        for symbol in watchlist:
+            ind = indicators.get(symbol, {})
+            signals: list[str] = []
+            bullish = 0
+            bearish = 0
+
+            # RSI signals
+            rsi_sig = ind.get("RSI_signal", "")
+            if rsi_sig == "OVERSOLD":
+                bullish += 2
+                signals.append("RSI oversold")
+            elif rsi_sig == "OVERBOUGHT":
+                bearish += 2
+                signals.append("RSI overbought")
+
+            # MACD signals
+            macd_trend = ind.get("MACD_trend", "")
+            if macd_trend == "BULLISH":
+                bullish += 1
+                signals.append("MACD bullish")
+            elif macd_trend == "BEARISH":
+                bearish += 1
+                signals.append("MACD bearish")
+
+            # Bollinger Band signals
+            bb_sig = ind.get("BB_signal", "")
+            if "BELOW_LOWER" in bb_sig:
+                bullish += 1
+                signals.append("Below BB lower")
+            elif "ABOVE_UPPER" in bb_sig:
+                bearish += 1
+                signals.append("Above BB upper")
+
+            # VWAP signals
+            vwap_sig = ind.get("VWAP_signal", "")
+            if "bullish" in vwap_sig:
+                bullish += 1
+            elif "bearish" in vwap_sig:
+                bearish += 1
+
+            # Streak reversal
+            streak_sig = ind.get("streak_signal", "")
+            if streak_sig == "REVERSAL LIKELY":
+                streak = ind.get("streak", "")
+                if "DOWN" in streak:
+                    bullish += 1
+                    signals.append("Streak reversal (oversold)")
+                elif "UP" in streak:
+                    bearish += 1
+                    signals.append("Streak reversal (overbought)")
+
+            # Volume surge amplifies existing signal
+            vol_sig = ind.get("vol_signal", "")
+            if "SURGE" in vol_sig:
+                if bullish > bearish:
+                    bullish += 1
+                elif bearish > bullish:
+                    bearish += 1
+                signals.append("Volume surge")
+
+            # Determine action
+            score = bullish - bearish
+            price = quote_prices.get(symbol, 0)
+
+            if score >= 3 and symbol not in held_symbols and price > 0:
+                budget = portfolio.cash * 0.02
+                qty = max(1, int(budget / price)) if price > 0 else 1
+                action = Action.BUY
+                confidence = Confidence.MEDIUM if score >= 4 else Confidence.LOW
+                reasoning = f"Rule-based BUY: {', '.join(signals)} (score {score})"
+            elif score <= -3 and symbol in held_symbols:
+                pos = next((p for p in portfolio.positions if p.symbol == symbol), None)
+                qty = pos.quantity if pos else 1
+                action = Action.SELL
+                confidence = Confidence.MEDIUM if score <= -4 else Confidence.LOW
+                reasoning = f"Rule-based SELL: {', '.join(signals)} (score {score})"
+            else:
+                action = Action.HOLD
+                confidence = Confidence.LOW
+                qty = None
+                reasoning = f"Rule-based HOLD: {', '.join(signals or ['no strong signal'])} (score {score})"
+
+            decisions.append(TradeDecision(
+                symbol=symbol,
+                action=action,
+                confidence=confidence,
+                quantity=qty,
+                reasoning=reasoning,
+            ))
+
+        return decisions

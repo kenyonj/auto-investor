@@ -307,6 +307,17 @@
         <div style="width:1px;height:40px;background:#30363d;"></div>
 
         <div style="flex:1; min-width:200px;">
+            <strong style="color:#d29922;">Pause AI</strong>
+            <p style="font-size:0.8rem; color:#8b949e; margin-top:4px;">Disable LLM calls. Trading continues using rule-based technical indicators only (RSI, MACD, Bollinger, etc).</p>
+        </div>
+        <button id="pause-ai-btn" onclick="togglePauseAi()"
+                style="background:{{ '#9e6a03' if pause_ai else '#21262d' }};color:#fff;border:1px solid {{ '#d29922' if pause_ai else '#30363d' }};padding:8px 20px;border-radius:6px;font-weight:600;font-size:0.85rem;cursor:pointer;white-space:nowrap;">
+            {{ '🤖 AI Paused — Click to Resume' if pause_ai else '🤖 Pause AI' }}
+        </button>
+
+        <div style="width:1px;height:40px;background:#30363d;"></div>
+
+        <div style="flex:1; min-width:200px;">
             <strong style="color:#f85149;">Sell All Positions</strong>
             <p style="font-size:0.8rem; color:#8b949e; margin-top:4px;">Immediately close every open position at market price. This cannot be undone.</p>
         </div>
@@ -868,6 +879,23 @@
                         btn.style.borderColor = '#d29922';
                     } else {
                         btn.textContent = '⏸ Hold All';
+                        btn.style.background = '#21262d';
+                        btn.style.borderColor = '#30363d';
+                    }
+                });
+        }
+
+        function togglePauseAi() {
+            fetch('/api/pause-ai', {method:'POST'})
+                .then(r => r.json())
+                .then(data => {
+                    const btn = document.getElementById('pause-ai-btn');
+                    if (data.pause_ai) {
+                        btn.textContent = '🤖 AI Paused — Click to Resume';
+                        btn.style.background = '#9e6a03';
+                        btn.style.borderColor = '#d29922';
+                    } else {
+                        btn.textContent = '🤖 Pause AI';
                         btn.style.background = '#21262d';
                         btn.style.borderColor = '#30363d';
                     }

@@ -89,7 +89,7 @@ def main():
             return nxt.timestamp()
 
         def guarded_cycle():
-            from auto_investor.dashboard import is_hold_all
+            from auto_investor.dashboard import is_hold_all, is_pause_ai
 
             if is_hold_all():
                 console.print("[yellow]⏸ HOLD ALL active — skipping AI analysis[/yellow]")
@@ -101,6 +101,10 @@ def main():
                     pass
                 return
 
+            skip_ai = is_pause_ai()
+            if skip_ai:
+                console.print("[yellow]🤖 AI paused — using rule-based analysis only[/yellow]")
+
             now = datetime.now()
             is_weekday = now.weekday() < 5
             market_open = now.replace(hour=open_h, minute=open_m, second=0)
@@ -109,13 +113,13 @@ def main():
 
             if equity_hours:
                 try:
-                    engine.run_cycle(dry_run=dry_run)
+                    engine.run_cycle(dry_run=dry_run, skip_ai=skip_ai)
                 except Exception as e:
                     console.print(f"[red]Equity cycle error: {e}[/red]")
 
             if config.crypto_watchlist:
                 try:
-                    engine.run_cycle(dry_run=dry_run, crypto=True)
+                    engine.run_cycle(dry_run=dry_run, crypto=True, skip_ai=skip_ai)
                 except Exception as e:
                     console.print(f"[red]Crypto cycle error: {e}[/red]")
 
