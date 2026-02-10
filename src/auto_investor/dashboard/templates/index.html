@@ -286,29 +286,55 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
     <script>
-        function _createEquityChart(labels, data) {
+        function _createEquityChart(labels, equityData, cryptoData) {
             const ctx = document.getElementById('equityChart').getContext('2d');
             window._equityChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        label: 'Equity',
-                        data: data,
-                        borderColor: '#58a6ff',
-                        backgroundColor: 'rgba(88, 166, 255, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 2,
-                    }]
+                    datasets: [
+                        {
+                            label: 'Equities',
+                            data: equityData,
+                            borderColor: '#58a6ff',
+                            backgroundColor: 'rgba(88, 166, 255, 0.15)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 2,
+                            order: 2,
+                        },
+                        {
+                            label: 'Crypto',
+                            data: cryptoData,
+                            borderColor: '#d2a8ff',
+                            backgroundColor: 'rgba(210, 168, 255, 0.15)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 2,
+                            order: 1,
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { color: '#8b949e', boxWidth: 12, padding: 12 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                footer: (items) => {
+                                    const total = items.reduce((s, i) => s + i.parsed.y, 0);
+                                    return 'Total: $' + total.toLocaleString(undefined, {minimumFractionDigits: 2});
+                                }
+                            }
+                        }
+                    },
                     scales: {
-                        x: { ticks: { color: '#8b949e', maxTicksLimit: 10 }, grid: { color: '#21262d' } },
-                        y: { ticks: { color: '#8b949e', callback: v => '$' + v.toLocaleString() }, grid: { color: '#21262d' } }
+                        x: { stacked: true, ticks: { color: '#8b949e', maxTicksLimit: 10 }, grid: { color: '#21262d' } },
+                        y: { stacked: true, ticks: { color: '#8b949e', callback: v => '$' + v.toLocaleString() }, grid: { color: '#21262d' } }
                     }
                 }
             });
@@ -316,7 +342,8 @@
         {% if equity_history|length > 1 %}
         _createEquityChart(
             [{% for e in equity_history %}"{{ e['timestamp'][:16].replace('T', ' ') }}"{{ "," if not loop.last }}{% endfor %}],
-            [{% for e in equity_history %}{{ e['equity'] }}{{ "," if not loop.last }}{% endfor %}]
+            [{% for e in equity_history %}{{ e['equity_mv'] }}{{ "," if not loop.last }}{% endfor %}],
+            [{% for e in equity_history %}{{ e['crypto_mv'] }}{{ "," if not loop.last }}{% endfor %}]
         );
         {% else %}
         window._equityChart = null;
@@ -388,18 +415,25 @@
                         }
                         // Append to chart when equity changes
                         if (msg.equity > 0) {
+                            const eqMv = msg.equity_mv || 0;
+                            const crMv = msg.crypto_mv || 0;
                             if (!window._equityChart) {
                                 const wrapper = document.getElementById('equity-chart-wrapper');
                                 if (wrapper) wrapper.style.display = '';
                                 const now = new Date();
                                 const label = now.toISOString().slice(0, 16).replace('T', ' ');
-                                _createEquityChart([label], [msg.equity]);
-                            } else if (Math.abs(msg.equity - window._equityChart.data.datasets[0].data.slice(-1)[0]) > 0.01) {
-                                const now = new Date();
-                                const label = now.toISOString().slice(0, 16).replace('T', ' ');
-                                window._equityChart.data.labels.push(label);
-                                window._equityChart.data.datasets[0].data.push(msg.equity);
-                                window._equityChart.update('none');
+                                _createEquityChart([label], [eqMv], [crMv]);
+                            } else {
+                                const lastEq = window._equityChart.data.datasets[0].data.slice(-1)[0] || 0;
+                                const lastCr = window._equityChart.data.datasets[1].data.slice(-1)[0] || 0;
+                                if (Math.abs(eqMv - lastEq) > 0.01 || Math.abs(crMv - lastCr) > 0.01) {
+                                    const now = new Date();
+                                    const label = now.toISOString().slice(0, 16).replace('T', ' ');
+                                    window._equityChart.data.labels.push(label);
+                                    window._equityChart.data.datasets[0].data.push(eqMv);
+                                    window._equityChart.data.datasets[1].data.push(crMv);
+                                    window._equityChart.update('none');
+                                }
                             }
                         }
                     }

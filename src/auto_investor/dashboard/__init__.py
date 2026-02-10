@@ -71,6 +71,8 @@ def _get_live_pl() -> dict | None:
 
         equity_pl = sum(float(p.unrealized_intraday_pl) for p in raw_positions if not _is_crypto(p))
         crypto_pl = sum(float(p.unrealized_intraday_pl) for p in raw_positions if _is_crypto(p))
+        equity_mv = sum(float(p.market_value) for p in raw_positions if not _is_crypto(p))
+        crypto_mv = sum(float(p.market_value) for p in raw_positions if _is_crypto(p))
         return {
             "equity": account["equity"],
             "cash": account["cash"],
@@ -78,6 +80,8 @@ def _get_live_pl() -> dict | None:
             "equity_pl": equity_pl,
             "crypto_pl": crypto_pl,
             "buying_power": account["buying_power"],
+            "equity_mv": equity_mv,
+            "crypto_mv": crypto_mv,
         }
     except Exception:
         return None
@@ -234,9 +238,32 @@ def index(request: Request):
     exec_total_pages = max(1, (total_executions + exec_per_page - 1) // exec_per_page)
 
     equity_history = db.execute(
-        "SELECT timestamp, equity, daily_pl FROM portfolio_snapshots ORDER BY id DESC LIMIT 100"
+        "SELECT timestamp, equity, daily_pl, positions_json FROM portfolio_snapshots ORDER BY id DESC LIMIT 100"
     ).fetchall()
     equity_history = list(reversed(equity_history))
+
+    # Compute equity vs crypto market value breakdown per snapshot
+    for i, row in enumerate(equity_history):
+        row = dict(row)
+        equity_mv = 0.0
+        crypto_mv = 0.0
+        if row.get("positions_json"):
+            try:
+                positions_data = json.loads(row["positions_json"])
+                for p in positions_data:
+                    mv = float(p.get("market_value", 0))
+                    if p.get("asset_class") == "crypto":
+                        crypto_mv += mv
+                    else:
+                        equity_mv += mv
+            except (json.JSONDecodeError, TypeError):
+                pass
+        # If no positions data, attribute all to equity
+        if equity_mv == 0 and crypto_mv == 0:
+            equity_mv = float(row.get("equity", 0))
+        row["equity_mv"] = equity_mv
+        row["crypto_mv"] = crypto_mv
+        equity_history[i] = row
 
     db.close()
 
