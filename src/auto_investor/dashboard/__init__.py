@@ -192,11 +192,22 @@ def api_decisions(request: Request):
     db = _get_db()
     per_page = max(1, min(int(request.query_params.get("per_page", 10)), 100))
     page = max(1, int(request.query_params.get("page", 1)))
+    symbol = request.query_params.get("symbol", "").strip().upper()
     offset = (page - 1) * per_page
-    total = db.execute("SELECT COUNT(*) as cnt FROM decisions").fetchone()["cnt"]
-    rows = db.execute(
-        "SELECT * FROM decisions ORDER BY id DESC LIMIT ? OFFSET ?", (per_page, offset)
-    ).fetchall()
+    if symbol:
+        total = db.execute(
+            "SELECT COUNT(*) as cnt FROM decisions WHERE UPPER(symbol) LIKE ?",
+            (f"%{symbol}%",),
+        ).fetchone()["cnt"]
+        rows = db.execute(
+            "SELECT * FROM decisions WHERE UPPER(symbol) LIKE ? ORDER BY id DESC LIMIT ? OFFSET ?",
+            (f"%{symbol}%", per_page, offset),
+        ).fetchall()
+    else:
+        total = db.execute("SELECT COUNT(*) as cnt FROM decisions").fetchone()["cnt"]
+        rows = db.execute(
+            "SELECT * FROM decisions ORDER BY id DESC LIMIT ? OFFSET ?", (per_page, offset)
+        ).fetchall()
     db.close()
     total_pages = max(1, (total + per_page - 1) // per_page)
     return {
@@ -214,15 +225,30 @@ def api_executions(request: Request):
     db = _get_db()
     per_page = max(1, min(int(request.query_params.get("per_page", 10)), 100))
     page = max(1, int(request.query_params.get("page", 1)))
+    symbol = request.query_params.get("symbol", "").strip().upper()
     offset = (page - 1) * per_page
-    total = db.execute("SELECT COUNT(*) as cnt FROM executions").fetchone()["cnt"]
-    rows = db.execute(
-        "SELECT e.*, d.action, d.confidence, d.reasoning "
-        "FROM executions e "
-        "LEFT JOIN decisions d ON e.decision_id = d.id "
-        "ORDER BY e.id DESC LIMIT ? OFFSET ?",
-        (per_page, offset),
-    ).fetchall()
+    if symbol:
+        total = db.execute(
+            "SELECT COUNT(*) as cnt FROM executions WHERE UPPER(symbol) LIKE ?",
+            (f"%{symbol}%",),
+        ).fetchone()["cnt"]
+        rows = db.execute(
+            "SELECT e.*, d.action, d.confidence, d.reasoning "
+            "FROM executions e "
+            "LEFT JOIN decisions d ON e.decision_id = d.id "
+            "WHERE UPPER(e.symbol) LIKE ? "
+            "ORDER BY e.id DESC LIMIT ? OFFSET ?",
+            (f"%{symbol}%", per_page, offset),
+        ).fetchall()
+    else:
+        total = db.execute("SELECT COUNT(*) as cnt FROM executions").fetchone()["cnt"]
+        rows = db.execute(
+            "SELECT e.*, d.action, d.confidence, d.reasoning "
+            "FROM executions e "
+            "LEFT JOIN decisions d ON e.decision_id = d.id "
+            "ORDER BY e.id DESC LIMIT ? OFFSET ?",
+            (per_page, offset),
+        ).fetchall()
     db.close()
     executions = _enrich_executions([dict(r) for r in rows])
     total_pages = max(1, (total + per_page - 1) // per_page)

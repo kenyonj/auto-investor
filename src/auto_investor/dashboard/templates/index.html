@@ -150,7 +150,9 @@
 
     <h2 style="display:flex; align-items:center; justify-content:space-between;">
         Recent Decisions
-        <span style="font-size:0.75rem; font-weight:400; color:#8b949e;">
+        <span style="font-size:0.75rem; font-weight:400; color:#8b949e; display:flex; align-items:center; gap:10px;">
+            <input id="dec-symbol-filter" type="text" placeholder="Filter symbol…" autocomplete="off"
+                   style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 8px;font-size:0.75rem;width:110px;">
             Show
             <select id="dec-per-page" autocomplete="off" style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 6px;font-size:0.75rem;">
                 {% for n in [5, 10, 25, 50] %}
@@ -215,7 +217,9 @@
     {% if executions %}
     <h2 style="display:flex; align-items:center; justify-content:space-between;">
         Recent Executions
-        <span style="font-size:0.75rem; font-weight:400; color:#8b949e;">
+        <span style="font-size:0.75rem; font-weight:400; color:#8b949e; display:flex; align-items:center; gap:10px;">
+            <input id="exec-symbol-filter" type="text" placeholder="Filter symbol…" autocomplete="off"
+                   style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 8px;font-size:0.75rem;width:110px;">
             Show
             <select id="exec-per-page" autocomplete="off" style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 6px;font-size:0.75rem;">
                 {% for n in [5, 10, 25, 50] %}
@@ -753,7 +757,10 @@
 
             window.loadDecisions = async function(pg) {
                 const pp = document.getElementById('dec-per-page').value;
-                const r = await fetch('/api/decisions?page=' + pg + '&per_page=' + pp);
+                const sym = (document.getElementById('dec-symbol-filter') || {}).value || '';
+                let url = '/api/decisions?page=' + pg + '&per_page=' + pp;
+                if (sym.length >= 3) url += '&symbol=' + encodeURIComponent(sym);
+                const r = await fetch(url);
                 const data = await r.json();
                 window._decPage = data.page;
                 renderDecisionsTable(data);
@@ -761,11 +768,34 @@
 
             window.loadExecutions = async function(pg) {
                 const pp = document.getElementById('exec-per-page').value;
-                const r = await fetch('/api/executions?page=' + pg + '&per_page=' + pp);
+                const sym = (document.getElementById('exec-symbol-filter') || {}).value || '';
+                let url = '/api/executions?page=' + pg + '&per_page=' + pp;
+                if (sym.length >= 3) url += '&symbol=' + encodeURIComponent(sym);
+                const r = await fetch(url);
                 const data = await r.json();
                 window._execPage = data.page;
                 renderExecutionsTable(data);
             };
+
+            // Debounce helper
+            function debounce(fn, ms) {
+                let timer;
+                return function() { clearTimeout(timer); timer = setTimeout(fn, ms); };
+            }
+
+            // Symbol filter inputs (debounced, min 3 chars or empty to clear)
+            const decFilter = document.getElementById('dec-symbol-filter');
+            if (decFilter) {
+                decFilter.addEventListener('input', debounce(() => {
+                    if (decFilter.value.length >= 3 || decFilter.value.length === 0) loadDecisions(1);
+                }, 300));
+            }
+            const execFilter = document.getElementById('exec-symbol-filter');
+            if (execFilter) {
+                execFilter.addEventListener('input', debounce(() => {
+                    if (execFilter.value.length >= 3 || execFilter.value.length === 0) loadExecutions(1);
+                }, 300));
+            }
 
             // Per-page select handlers
             document.getElementById('dec-per-page').addEventListener('change', () => loadDecisions(1));
