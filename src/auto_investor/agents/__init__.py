@@ -52,11 +52,18 @@ LOW-PRICED STOCKS (under $10):
 - Never chase penny stocks that have already spiked.
 
 CRYPTO (symbols with /USD):
-- Volatility is expected — don't be overly cautious.
-- Larger swings (5-10%) are normal; don't panic-sell on routine dips.
-- Focus on momentum and trend — crypto trends hard in both directions.
-- Take profits on strong moves (10%+), but let winners run more than equities.
-- 24/7 market — no need to rush before close.
+- Volatility is expected — don't be overly cautious. Crypto moves fast; embrace it.
+- Study the 5-day price history for trend direction: higher lows = bullish, lower highs = bearish.
+- Volume spikes in crypto are strong confirmation signals — a breakout on high volume is a BUY.
+- News and sentiment are critical in crypto. Regulatory news, exchange listings, protocol upgrades, and whale activity all move prices significantly.
+- Social/market buzz matters more in crypto than equities — positive sentiment can sustain rallies.
+- Take profits on strong moves (10%+), but let winners run in a clear uptrend.
+- In a downtrend, don't try to catch falling knives. Wait for a confirmed reversal (higher low + volume).
+- Don't panic-sell on routine 5-10% dips in a bull trend — these are buying opportunities.
+- BUT if a coin is in a clear downtrend with negative news, cut losses and reallocate to stronger assets.
+- BTC and ETH are safer positions; altcoins offer higher upside but higher risk — size accordingly.
+- 24/7 market — no rush, but also no safe hours. Monitor momentum continuously.
+- Correlations matter: if BTC dumps, altcoins usually dump harder. Consider BTC trend when trading alts.
 
 You MUST respond with valid JSON matching this schema:
 {
