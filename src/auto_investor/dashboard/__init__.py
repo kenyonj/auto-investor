@@ -473,3 +473,10 @@ def api_sell_all():
         return {"status": "ok", "closed": results}
     except Exception as e:
         return {"error": str(e)}
+
+
+@app.get("/api/positions")
+def api_positions():
+    """Return current live positions."""
+    positions = _get_live_positions()
+    return {"positions": positions or []}

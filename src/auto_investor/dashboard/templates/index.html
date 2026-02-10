@@ -923,19 +923,59 @@
                 .then(r => r.json())
                 .then(data => {
                     closeSellAllModal();
+                    btn.textContent = 'Sell All Positions';
                     if (data.error) {
                         alert('Error: ' + data.error);
-                    } else {
-                        const count = data.closed ? data.closed.length : 0;
-                        alert('Closed ' + count + ' position(s).');
+                        return;
                     }
-                    btn.textContent = 'Sell All Positions';
+                    const closed = data.closed || [];
+                    const errors = closed.filter(c => c.status.startsWith('error'));
+                    if (errors.length) {
+                        alert('Some positions failed to close:\n' + errors.map(e => e.symbol + ': ' + e.status).join('\n'));
+                    }
+                    // Show closing banner
+                    _showSellAllBanner(closed.length - errors.length);
                 })
                 .catch(() => {
                     closeSellAllModal();
                     alert('Failed to contact server.');
                     btn.textContent = 'Sell All Positions';
                 });
+        }
+
+        function _showSellAllBanner(count) {
+            if (count <= 0) return;
+            let banner = document.getElementById('sell-all-banner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'sell-all-banner';
+                banner.style.cssText = 'background:#9e6a03;color:#fff;padding:10px 16px;border-radius:6px;margin-bottom:12px;font-weight:600;text-align:center;';
+                const header = document.querySelector('h2');
+                header.parentNode.insertBefore(banner, header);
+            }
+            banner.textContent = '⏳ Closing ' + count + ' position(s) — waiting for orders to fill…';
+            // Poll positions until they clear
+            let polls = 0;
+            const maxPolls = 30;
+            const pollInterval = setInterval(() => {
+                polls++;
+                fetch('/api/positions').then(r => r.json()).then(data => {
+                    const remaining = (data.positions || []).length;
+                    if (remaining === 0) {
+                        banner.style.background = '#238636';
+                        banner.textContent = '✓ All positions closed.';
+                        clearInterval(pollInterval);
+                        setTimeout(() => banner.remove(), 5000);
+                    } else if (polls >= maxPolls) {
+                        banner.textContent = '⚠ ' + remaining + ' position(s) still open — orders may fill when market opens.';
+                        banner.style.background = '#da3633';
+                        clearInterval(pollInterval);
+                        setTimeout(() => banner.remove(), 10000);
+                    } else {
+                        banner.textContent = '⏳ ' + remaining + ' position(s) still closing…';
+                    }
+                }).catch(() => {});
+            }, 2000);
         }
     </script>
 </body>
