@@ -4,12 +4,14 @@ from datetime import datetime, timedelta
 
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.historical.crypto import CryptoHistoricalDataClient
+from alpaca.data.historical.news import NewsClient
 from alpaca.data.historical.screener import ScreenerClient
 from alpaca.data.requests import (
     CryptoBarsRequest,
     CryptoLatestQuoteRequest,
     MarketMoversRequest,
     MostActivesRequest,
+    NewsRequest,
     StockBarsRequest,
     StockLatestQuoteRequest,
 )
@@ -23,6 +25,7 @@ from auto_investor.models import (
     Action,
     DailyBar,
     MarketQuote,
+    NewsArticle,
     PortfolioSnapshot,
     Position,
     TradeDecision,
@@ -48,6 +51,10 @@ class AlpacaClient:
             secret_key=self.secrets.alpaca_secret_key,
         )
         self.crypto_data = CryptoHistoricalDataClient(
+            api_key=self.secrets.alpaca_api_key,
+            secret_key=self.secrets.alpaca_secret_key,
+        )
+        self.news_client = NewsClient(
             api_key=self.secrets.alpaca_api_key,
             secret_key=self.secrets.alpaca_secret_key,
         )
@@ -278,6 +285,37 @@ class AlpacaClient:
                 ]
 
         return result
+
+    def get_news(self, symbols: list[str], limit: int = 5) -> dict[str, list[NewsArticle]]:
+        """Get recent news articles for a list of symbols."""
+        # Alpaca expects comma-separated symbols without /USD for crypto
+        clean_syms = [s.replace("/", "") for s in symbols]
+        try:
+            request = NewsRequest(
+                symbols=",".join(clean_syms),
+                limit=limit * len(clean_syms),
+                include_content=False,
+                exclude_contentless=True,
+                sort="DESC",
+            )
+            news_set = self.news_client.get_news(request)
+            result: dict[str, list[NewsArticle]] = {s: [] for s in symbols}
+            for article in news_set.data.get("news", []):
+                for sym in symbols:
+                    clean = sym.replace("/", "")
+                    if clean in article.symbols and len(result[sym]) < limit:
+                        result[sym].append(
+                            NewsArticle(
+                                headline=article.headline,
+                                summary=article.summary or "",
+                                source=article.source,
+                                created_at=article.created_at,
+                                symbols=article.symbols,
+                            )
+                        )
+            return result
+        except Exception:
+            return {}
 
     @staticmethod
     def _is_regular_hours() -> bool:

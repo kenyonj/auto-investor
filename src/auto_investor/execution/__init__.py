@@ -121,9 +121,17 @@ class ExecutionEngine:
             console.print(f"  [dim]Could not fetch bars: {e}[/dim]")
             bars = {}
 
+        # 4b. Fetch recent news
+        console.print("[dim]Fetching recent news...[/dim]")
+        try:
+            news = self.alpaca.get_news(watchlist, limit=3)
+        except Exception as e:
+            console.print(f"  [dim]Could not fetch news: {e}[/dim]")
+            news = {}
+
         # 5. AI analysis
         console.print("[dim]Running AI analysis...[/dim]")
-        decisions = self.agent.analyze(portfolio, quotes, watchlist, bars=bars)
+        decisions = self.agent.analyze(portfolio, quotes, watchlist, bars=bars, news=news)
 
         # 6. Risk checks
         console.print("[dim]Applying risk checks...[/dim]")

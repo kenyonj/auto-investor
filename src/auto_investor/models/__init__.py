@@ -76,3 +76,13 @@ class DailyBar(BaseModel):
     low: float
     close: float
     volume: int
+
+
+class NewsArticle(BaseModel):
+    """Summary of a news article for AI context."""
+
+    headline: str
+    summary: str
+    source: str
+    created_at: datetime
+    symbols: list[str] = []
