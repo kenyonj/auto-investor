@@ -34,6 +34,14 @@ PRICE ACTION ANALYSIS (use the 5-day history):
 - Check for gaps, reversals, or consolidation patterns.
 - Compare current price to the 5-day range — is it near the high (potential resistance) or low (potential support)?
 
+TECHNICAL INDICATORS (computed from 35-day history):
+- RSI (14): Below 30 = oversold (potential BUY), above 70 = overbought (potential SELL). 40-60 = neutral.
+- MACD: Bullish when MACD line > signal line (positive histogram). Bearish when below. Crossovers are key signals.
+- SMA (10/20): Price above SMA = bullish trend. Below = bearish. SMA crossovers (10 crossing 20) signal trend changes.
+- Bollinger Bands: Price near upper band = potentially overbought. Near lower band = potentially oversold. Squeeze (narrow bands) = breakout imminent.
+- Use indicators to CONFIRM price action — don't trade on a single indicator alone.
+- When multiple indicators align (e.g., RSI oversold + MACD bullish crossover + price at BB lower), that's a strong signal.
+
 NEWS & SENTIMENT:
 - Recent positive news = tailwind. Consider buying or holding.
 - Recent negative news = headwind. Consider selling or avoiding.
@@ -108,6 +116,7 @@ class AnalystAgent:
         bars: dict[str, list[DailyBar]] | None = None,
         news: dict[str, list[NewsArticle]] | None = None,
         reddit_posts: list[NewsArticle] | None = None,
+        indicators: dict[str, dict[str, str]] | None = None,
     ) -> list[TradeDecision]:
         """Analyze market conditions and return trade decisions."""
 
@@ -140,6 +149,20 @@ class AnalystAgent:
                     "\n\n## Recent Price History (5 trading days)\n"
                     "Study these carefully for trends, momentum, and support/resistance:\n"
                     + "\n".join(bar_lines)
+                )
+
+        indicators_section = ""
+        if indicators:
+            ind_lines = []
+            for symbol, ind in indicators.items():
+                parts = [f"{k}: {v}" for k, v in ind.items()]
+                ind_lines.append(f"  {symbol}: {' | '.join(parts)}")
+            if ind_lines:
+                indicators_section = (
+                    "\n\n## Technical Indicators (35-day)\n"
+                    "Use these to confirm or challenge your "
+                    "price action read:\n"
+                    + "\n".join(ind_lines)
                 )
 
         news_section = ""
@@ -194,10 +217,11 @@ for each symbol in the watchlist.
 ## Watchlist
 {", ".join(watchlist)}
 {bars_section}
+{indicators_section}
 {news_section}
 {reddit_section}
 
-Analyze the price history trends, news sentiment, and social sentiment for each symbol.
+Analyze the price history, technical indicators, news, and social sentiment for each symbol.
 Provide your analysis and trade decisions as JSON."""
 
         response = self.client.messages.create(

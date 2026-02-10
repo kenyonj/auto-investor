@@ -11,6 +11,7 @@ from auto_investor.clients import AlpacaClient
 from auto_investor.clients.reddit import RedditClient
 from auto_investor.config import AppConfig, Secrets, load_config
 from auto_investor.data import DataStore
+from auto_investor.indicators import compute_indicators
 from auto_investor.models import Action
 from auto_investor.risk import RiskManager
 
@@ -116,12 +117,23 @@ class ExecutionEngine:
         quote_prices = {q.symbol: q.price for q in quotes}
 
         # 4. Fetch recent price history
-        console.print("[dim]Fetching 5-day price history...[/dim]")
+        console.print("[dim]Fetching price history...[/dim]")
         try:
             bars = self.alpaca.get_bars(watchlist, days=5)
         except Exception as e:
             console.print(f"  [dim]Could not fetch bars: {e}[/dim]")
             bars = {}
+
+        # 4a. Compute technical indicators from extended history
+        console.print("[dim]Computing technical indicators...[/dim]")
+        try:
+            extended_bars = self.alpaca.get_bars(watchlist, days=35)
+            indicators = compute_indicators(extended_bars)
+        except Exception as e:
+            console.print(
+                f"  [dim]Could not compute indicators: {e}[/dim]"
+            )
+            indicators = {}
 
         # 4b. Fetch recent news
         console.print("[dim]Fetching recent news...[/dim]")
@@ -142,7 +154,10 @@ class ExecutionEngine:
         # 5. AI analysis
         console.print("[dim]Running AI analysis...[/dim]")
         decisions = self.agent.analyze(
-            portfolio, quotes, watchlist, bars=bars, news=news, reddit_posts=reddit_posts
+            portfolio, quotes, watchlist,
+            bars=bars, news=news,
+            reddit_posts=reddit_posts,
+            indicators=indicators,
         )
 
         # 6. Risk checks
