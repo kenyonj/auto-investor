@@ -91,55 +91,55 @@ table {
 }
 td, th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Decisions table column widths */
+/* Decisions table column widths (7 cols) */
 #decisions-container th:nth-child(1),
-#decisions-container td:nth-child(1) { width: 120px; }  /* Time */
+#decisions-container td:nth-child(1) { width: 13%; }  /* Time */
 #decisions-container th:nth-child(2),
-#decisions-container td:nth-child(2) { width: 80px; }   /* Symbol */
+#decisions-container td:nth-child(2) { width: 8%; }   /* Symbol */
 #decisions-container th:nth-child(3),
-#decisions-container td:nth-child(3) { width: 70px; }   /* Action */
+#decisions-container td:nth-child(3) { width: 8%; }   /* Action */
 #decisions-container th:nth-child(4),
-#decisions-container td:nth-child(4) { width: 80px; }   /* Confidence */
+#decisions-container td:nth-child(4) { width: 9%; }   /* Confidence */
 #decisions-container th:nth-child(5),
-#decisions-container td:nth-child(5) { width: 60px; }   /* Qty */
+#decisions-container td:nth-child(5) { width: 6%; }   /* Qty */
 #decisions-container th:nth-child(6),
-#decisions-container td:nth-child(6) { width: auto; }   /* Reasoning - flex */
+#decisions-container td:nth-child(6) { width: 48%; }  /* Reasoning */
 #decisions-container th:nth-child(7),
-#decisions-container td:nth-child(7) { width: 70px; }   /* Status */
+#decisions-container td:nth-child(7) { width: 8%; }   /* Status */
 
-/* Executions table column widths */
+/* Executions table column widths (8 cols) */
 #executions-container th:nth-child(1),
-#executions-container td:nth-child(1) { width: 120px; }  /* Time */
+#executions-container td:nth-child(1) { width: 14%; }  /* Time */
 #executions-container th:nth-child(2),
-#executions-container td:nth-child(2) { width: 80px; }   /* Symbol */
+#executions-container td:nth-child(2) { width: 10%; }  /* Symbol */
 #executions-container th:nth-child(3),
-#executions-container td:nth-child(3) { width: 60px; }   /* Side */
+#executions-container td:nth-child(3) { width: 8%; }   /* Side */
 #executions-container th:nth-child(4),
-#executions-container td:nth-child(4) { width: 60px; }   /* Qty */
+#executions-container td:nth-child(4) { width: 8%; }   /* Qty */
 #executions-container th:nth-child(5),
-#executions-container td:nth-child(5) { width: 110px; }  /* Amount */
+#executions-container td:nth-child(5) { width: 14%; }  /* Amount */
 #executions-container th:nth-child(6),
-#executions-container td:nth-child(6) { width: 70px; }   /* Type */
+#executions-container td:nth-child(6) { width: 10%; }  /* Type */
 #executions-container th:nth-child(7),
-#executions-container td:nth-child(7) { width: 80px; }   /* Status */
+#executions-container td:nth-child(7) { width: 10%; }  /* Status */
 #executions-container th:nth-child(8),
-#executions-container td:nth-child(8) { width: auto; }   /* Order ID - flex */
+#executions-container td:nth-child(8) { width: 26%; }  /* Order ID */
 
-/* Positions table column widths */
+/* Positions table column widths (7 cols) */
 .positions-table th:nth-child(1),
-.positions-table td:nth-child(1) { width: 80px; }   /* Symbol */
+.positions-table td:nth-child(1) { width: 10%; }  /* Symbol */
 .positions-table th:nth-child(2),
-.positions-table td:nth-child(2) { width: 80px; }   /* Qty */
+.positions-table td:nth-child(2) { width: 10%; }  /* Qty */
 .positions-table th:nth-child(3),
-.positions-table td:nth-child(3) { width: 100px; }  /* Avg Entry */
+.positions-table td:nth-child(3) { width: 16%; }  /* Avg Entry */
 .positions-table th:nth-child(4),
-.positions-table td:nth-child(4) { width: 100px; }  /* Current */
+.positions-table td:nth-child(4) { width: 16%; }  /* Current */
 .positions-table th:nth-child(5),
-.positions-table td:nth-child(5) { width: 110px; }  /* Market Value */
+.positions-table td:nth-child(5) { width: 18%; }  /* Market Value */
 .positions-table th:nth-child(6),
-.positions-table td:nth-child(6) { width: 100px; }  /* P&L */
+.positions-table td:nth-child(6) { width: 16%; }  /* P&L */
 .positions-table th:nth-child(7),
-.positions-table td:nth-child(7) { width: auto; }   /* P&L % */
+.positions-table td:nth-child(7) { width: 14%; }  /* P&L % */
 th {
     background: #21262d;
     text-align: left;
