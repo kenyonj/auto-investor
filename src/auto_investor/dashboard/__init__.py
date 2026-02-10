@@ -6,12 +6,15 @@ import os
 import sqlite3
 import threading
 import time
+from importlib.metadata import version as pkg_version
 from pathlib import Path
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
+APP_VERSION = pkg_version("auto-investor")
 
 app = FastAPI(title="auto-investor dashboard")
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
@@ -271,6 +274,7 @@ def index(request: Request):
         "index.html",
         {
             "request": request,
+            "version": APP_VERSION,
             "snapshot": snapshot,
             "live_pl": live_pl,
             "positions": positions,
