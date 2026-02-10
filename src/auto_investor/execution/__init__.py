@@ -8,6 +8,7 @@ from rich.table import Table
 
 from auto_investor.agents import AnalystAgent
 from auto_investor.clients import AlpacaClient
+from auto_investor.clients.reddit import RedditClient
 from auto_investor.config import AppConfig, Secrets, load_config
 from auto_investor.data import DataStore
 from auto_investor.models import Action
@@ -33,6 +34,7 @@ class ExecutionEngine:
         self.agent = AnalystAgent(self.config.ai, self.secrets)
         self.store = DataStore(os.environ.get("DB_PATH", "auto_investor.db"))
         self.risk = RiskManager(self.config.risk, store=self.store)
+        self.reddit = RedditClient(self.config.reddit_subreddits)
         self._hold_cooldowns: dict[str, datetime] = {}
 
     def _apply_cooldowns(self, watchlist: list[str]) -> list[str]:
@@ -129,9 +131,19 @@ class ExecutionEngine:
             console.print(f"  [dim]Could not fetch news: {e}[/dim]")
             news = {}
 
+        # 4c. Fetch Reddit sentiment
+        console.print("[dim]Fetching Reddit sentiment...[/dim]")
+        try:
+            reddit_posts = self.reddit.get_posts(limit=5)
+        except Exception as e:
+            console.print(f"  [dim]Could not fetch Reddit posts: {e}[/dim]")
+            reddit_posts = []
+
         # 5. AI analysis
         console.print("[dim]Running AI analysis...[/dim]")
-        decisions = self.agent.analyze(portfolio, quotes, watchlist, bars=bars, news=news)
+        decisions = self.agent.analyze(
+            portfolio, quotes, watchlist, bars=bars, news=news, reddit_posts=reddit_posts
+        )
 
         # 6. Risk checks
         console.print("[dim]Applying risk checks...[/dim]")

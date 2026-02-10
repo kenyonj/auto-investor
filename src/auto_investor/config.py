@@ -39,6 +39,7 @@ class AppConfig(BaseModel):
     trading: TradingConfig = TradingConfig()
     watchlist: list[str] = []
     crypto_watchlist: list[str] = []
+    reddit_subreddits: list[str] = ["stocks", "investing", "algotrading"]
     risk: RiskConfig = RiskConfig()
     ai: AIConfig = AIConfig()
 

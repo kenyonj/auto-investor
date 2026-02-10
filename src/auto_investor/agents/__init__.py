@@ -40,6 +40,14 @@ NEWS & SENTIMENT:
 - No news = neutral. Rely on price action alone.
 - Weigh the recency and significance of news — a major catalyst today matters more than minor news from 3 days ago.
 
+REDDIT & SOCIAL SENTIMENT:
+- Reddit posts from r/stocks, r/investing, and r/algotrading are provided as supplemental sentiment data.
+- Look for: consensus bullish/bearish sentiment, DD (due diligence) posts, earnings discussions, sector rotations.
+- High upvote/discussion posts indicate strong community conviction — use as a sentiment signal.
+- Be cautious of hype-driven posts (meme stocks, pump talk) — these can indicate short-term volatility, not long-term value.
+- If Reddit sentiment aligns with price action and news, it strengthens the signal. If it contradicts, weigh the fundamentals more heavily.
+- Reddit is a leading indicator for retail sentiment — use it to gauge crowd positioning.
+
 POSITION MANAGEMENT:
 - Consider portfolio diversification — don't over-concentrate.
 - Factor in current positions: if already holding and it's up, consider taking partial or full profits.
@@ -99,6 +107,7 @@ class AnalystAgent:
         watchlist: list[str],
         bars: dict[str, list[DailyBar]] | None = None,
         news: dict[str, list[NewsArticle]] | None = None,
+        reddit_posts: list[NewsArticle] | None = None,
     ) -> list[TradeDecision]:
         """Analyze market conditions and return trade decisions."""
 
@@ -152,6 +161,21 @@ class AnalystAgent:
                     + "\n".join(news_lines)
                 )
 
+        reddit_section = ""
+        if reddit_posts:
+            reddit_lines = []
+            for post in reddit_posts:
+                ts = post.created_at.strftime("%m/%d %H:%M")
+                reddit_lines.append(f"  [{ts}] {post.headline} ({post.source})")
+                if post.summary:
+                    reddit_lines.append(f"    {post.summary[:200]}")
+            if reddit_lines:
+                reddit_section = (
+                    "\n\n## Reddit / Social Sentiment\n"
+                    "Recent posts from trading/investing communities — use for retail sentiment:\n"
+                    + "\n".join(reddit_lines)
+                )
+
         prompt = f"""Analyze the following portfolio and market data, then provide trade decisions
 for each symbol in the watchlist.
 
@@ -171,8 +195,9 @@ for each symbol in the watchlist.
 {", ".join(watchlist)}
 {bars_section}
 {news_section}
+{reddit_section}
 
-Analyze the price history trends and news sentiment for each symbol.
+Analyze the price history trends, news sentiment, and social sentiment for each symbol.
 Provide your analysis and trade decisions as JSON."""
 
         response = self.client.messages.create(
