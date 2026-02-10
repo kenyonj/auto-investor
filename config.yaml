@@ -1,11 +1,11 @@
 # Default configuration for auto-investor
 
 trading:
-  mode: paper  # paper | live (live requires explicit opt-in)
+  mode: paper # paper | live (live requires explicit opt-in)
   schedule:
-    market_open_scan: "09:35"   # 5 min after open
-    midday_check: "12:00"
-    pre_close_review: "15:30"   # 30 min before close
+    interval_minutes: 5 # run every N minutes during trading hours
+    market_open: "04:00" # pre-market open (extended hours)
+    market_close: "20:00" # after-hours close (extended hours)
 
 watchlist:
   - AAPL
@@ -19,14 +19,21 @@ watchlist:
   - VTI
   - ARKK
 
+crypto_watchlist:
+  - BTC/USD
+  - ETH/USD
+  - SOL/USD
+  - DOGE/USD
+
 risk:
-  max_position_pct: 15          # max % of portfolio in a single position
-  max_portfolio_risk_pct: 80    # max % of portfolio deployed
-  daily_loss_limit_pct: 3       # circuit breaker: stop trading if down X% today
-  max_trades_per_day: 10
-  min_cash_reserve_pct: 20      # always keep at least X% in cash
+  max_position_pct: 25 # max % of portfolio in a single position
+  max_portfolio_risk_pct: 100 # max % of portfolio deployed
+  daily_loss_limit_pct: 3 # circuit breaker: stop trading if down X% today
+  max_trades_per_day: 1000
+  min_cash_reserve_pct: 0.0 # always keep at least X% in cash
+  # session_budget: 1000 # uncomment to cap total buys per session
 
 ai:
   model: claude-sonnet-4-20250514
   max_tokens: 4096
-  temperature: 0.3              # low temp for more deterministic decisions
+  temperature: 0.3 # low temp for more deterministic decisions

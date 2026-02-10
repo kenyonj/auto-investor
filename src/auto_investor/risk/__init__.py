@@ -3,13 +3,17 @@
 from auto_investor.config import RiskConfig
 from auto_investor.models import Action, PortfolioSnapshot, TradeDecision
 
+WASH_SALE_DAYS = 30
+
 
 class RiskManager:
     """Evaluates and filters trade decisions based on risk rules."""
 
-    def __init__(self, config: RiskConfig | None = None):
+    def __init__(self, config: RiskConfig | None = None, store=None):
         self.config = config or RiskConfig()
         self.trades_today = 0
+        self.session_spent = 0.0
+        self.store = store  # DataStore for wash sale lookups
 
     def evaluate(
         self, decisions: list[TradeDecision], portfolio: PortfolioSnapshot
@@ -31,6 +35,14 @@ class RiskManager:
                 decision.quantity = None
             else:
                 self.trades_today += 1
+                # Track session budget spending for buys
+                if decision.action == Action.BUY and decision.quantity:
+                    existing = next(
+                        (p for p in portfolio.positions if p.symbol == decision.symbol), None
+                    )
+                    price = existing.current_price if existing else 0
+                    if price > 0:
+                        self.session_spent += decision.quantity * price
 
             approved.append(decision)
 
@@ -54,28 +66,62 @@ class RiskManager:
             return self._check_sell(decision, portfolio)
         return False, ""
 
-    def _check_buy(
-        self, decision: TradeDecision, portfolio: PortfolioSnapshot
-    ) -> tuple[bool, str]:
+    def _check_buy(self, decision: TradeDecision, portfolio: PortfolioSnapshot) -> tuple[bool, str]:
         """Validate a buy decision."""
         if not decision.quantity or decision.quantity <= 0:
             return True, "Invalid quantity"
 
-        # Check cash reserve
-        cash_pct = (portfolio.cash / portfolio.equity) * 100 if portfolio.equity else 0
-        if cash_pct <= self.config.min_cash_reserve_pct:
-            return True, f"Cash reserve too low ({cash_pct:.1f}% < {self.config.min_cash_reserve_pct}%)"
+        # Check wash sale rule (not applicable to crypto)
+        if self.store and "/" not in decision.symbol:
+            loss_sale = self.store.get_recent_loss_sale(decision.symbol, WASH_SALE_DAYS)
+            if loss_sale:
+                return (
+                    True,
+                    f"Wash sale: {decision.symbol} sold at loss "
+                    f"(${loss_sale['loss']:,.2f}) on {loss_sale['timestamp'][:10]}, "
+                    f"{WASH_SALE_DAYS}-day cooldown",
+                )
 
-        # Check max position size
+        # Check session budget
+        if self.config.session_budget is not None:
+            existing = next((p for p in portfolio.positions if p.symbol == decision.symbol), None)
+            est_price = existing.current_price if existing else 0
+            if est_price > 0:
+                cost = decision.quantity * est_price
+                if self.session_spent + cost > self.config.session_budget:
+                    remaining = self.config.session_budget - self.session_spent
+                    return (
+                        True,
+                        f"Exceeds session budget "
+                        f"(${cost:,.0f} would exceed ${remaining:,.0f} remaining)",
+                    )
+
+        # Check buying power reserve
+        bp_pct = (portfolio.buying_power / portfolio.equity) * 100 if portfolio.equity else 0
+        if bp_pct <= self.config.min_cash_reserve_pct:
+            return (
+                True,
+                f"Buying power too low ({bp_pct:.1f}% < {self.config.min_cash_reserve_pct}%)",
+            )
+
+        # Check max position size (tighter limit for low-priced stocks, skip for crypto)
         existing = next((p for p in portfolio.positions if p.symbol == decision.symbol), None)
         existing_value = existing.market_value if existing else 0
-        # Estimate new position value (rough — uses current price from positions or 0)
         est_price = existing.current_price if existing else 0
+        is_crypto = "/" in decision.symbol
         if est_price > 0:
             new_value = existing_value + (decision.quantity * est_price)
             position_pct = (new_value / portfolio.equity) * 100
-            if position_pct > self.config.max_position_pct:
-                return True, f"Position too large ({position_pct:.1f}% > {self.config.max_position_pct}%)"
+            max_pct = self.config.max_position_pct
+            if not is_crypto and est_price < self.config.low_price_threshold:
+                max_pct = self.config.low_price_max_position_pct
+            if position_pct > max_pct:
+                label = "low-priced " if est_price < self.config.low_price_threshold else ""
+                return (
+                    True,
+                    f"Position too large for {label}{'crypto' if is_crypto else 'stock'} "
+                    f"({position_pct:.1f}% > {max_pct}%)",
+                )
 
         return False, ""
 

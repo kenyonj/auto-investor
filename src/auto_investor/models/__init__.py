@@ -24,7 +24,7 @@ class TradeDecision(BaseModel):
     symbol: str
     action: Action
     confidence: Confidence
-    quantity: int | None = None
+    quantity: float | None = None
     limit_price: float | None = None
     reasoning: str
     risk_notes: str = ""
@@ -41,6 +41,7 @@ class Position(BaseModel):
     market_value: float
     unrealized_pl: float
     unrealized_pl_pct: float
+    asset_class: str = "us_equity"
 
 
 class PortfolioSnapshot(BaseModel):
@@ -64,3 +65,14 @@ class MarketQuote(BaseModel):
     change_pct: float
     volume: int
     timestamp: datetime
+
+
+class DailyBar(BaseModel):
+    """Single day OHLCV bar."""
+
+    date: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int

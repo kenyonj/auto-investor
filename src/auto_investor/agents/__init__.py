@@ -5,7 +5,14 @@ import json
 import anthropic
 
 from auto_investor.config import AIConfig, Secrets
-from auto_investor.models import Action, Confidence, MarketQuote, PortfolioSnapshot, TradeDecision
+from auto_investor.models import (
+    Action,
+    Confidence,
+    DailyBar,
+    MarketQuote,
+    PortfolioSnapshot,
+    TradeDecision,
+)
 
 SYSTEM_PROMPT = """You are an expert financial analyst and trader. You analyze market conditions, 
 portfolio state, and individual stock data to make informed trading decisions.
@@ -20,6 +27,22 @@ Guidelines:
 - Provide clear, concise reasoning for every decision.
 - Flag any risk concerns.
 
+LOW-PRICED STOCKS (under $10):
+- Use smaller position sizes — these are volatile, so limit exposure.
+- Take profits quickly: recommend SELL on gains of even a few cents
+  per share (1-3% gain is sufficient).
+- Set tighter mental stop-losses: if a low-priced stock drops 3-5%,
+  recommend SELL to cut losses.
+- Never chase penny stocks that have already spiked — wait for pullbacks.
+
+CRYPTO (symbols with /USD):
+- Volatility is expected and acceptable — don't be overly cautious.
+- Larger swings (5-10%) are normal; don't panic-sell on routine dips.
+- Focus on momentum and trend — crypto trends hard in both directions.
+- Take profits on strong moves (10%+), but let winners run more than equities.
+- Position sizing can be more aggressive than low-priced stocks.
+- 24/7 market — no need to rush before close.
+
 You MUST respond with valid JSON matching this schema:
 {
   "market_assessment": "Brief overall market read",
@@ -28,7 +51,7 @@ You MUST respond with valid JSON matching this schema:
       "symbol": "AAPL",
       "action": "buy|sell|hold",
       "confidence": "high|medium|low",
-      "quantity": 5,
+      "quantity": 5.5,
       "reasoning": "Why this action",
       "risk_notes": "Any concerns"
     }
@@ -36,7 +59,7 @@ You MUST respond with valid JSON matching this schema:
 }
 
 Only include quantity for BUY/SELL actions. For HOLD, omit quantity.
-Keep quantities reasonable relative to the portfolio size provided."""
+Fractional shares are supported (e.g. 0.5, 2.75). Keep quantities reasonable relative to the portfolio size provided."""
 
 
 class AnalystAgent:
@@ -52,18 +75,38 @@ class AnalystAgent:
         portfolio: PortfolioSnapshot,
         quotes: list[MarketQuote],
         watchlist: list[str],
+        bars: dict[str, list[DailyBar]] | None = None,
     ) -> list[TradeDecision]:
         """Analyze market conditions and return trade decisions."""
 
-        positions_summary = "\n".join(
-            f"  {p.symbol}: {p.quantity} shares @ ${p.avg_entry_price:.2f} "
-            f"(now ${p.current_price:.2f}, P&L: {p.unrealized_pl_pct:+.1f}%)"
-            for p in portfolio.positions
-        ) or "  No open positions"
+        positions_summary = (
+            "\n".join(
+                f"  {p.symbol}: {p.quantity} shares @ ${p.avg_entry_price:.2f} "
+                f"(now ${p.current_price:.2f}, P&L: {p.unrealized_pl_pct:+.1f}%)"
+                for p in portfolio.positions
+            )
+            or "  No open positions"
+        )
 
-        quotes_summary = "\n".join(
-            f"  {q.symbol}: ${q.price:.2f}" for q in quotes
-        ) or "  No quotes available"
+        quotes_summary = (
+            "\n".join(f"  {q.symbol}: ${q.price:.2f}" for q in quotes) or "  No quotes available"
+        )
+
+        bars_section = ""
+        if bars:
+            bar_lines = []
+            for symbol, symbol_bars in bars.items():
+                if symbol_bars:
+                    history = " → ".join(
+                        f"{b.date}: O:{b.open:.2f} H:{b.high:.2f} "
+                        f"L:{b.low:.2f} C:{b.close:.2f} V:{b.volume:,}"
+                        for b in symbol_bars
+                    )
+                    bar_lines.append(f"  {symbol}: {history}")
+            if bar_lines:
+                bars_section = "\n\n## Recent Price History (5 trading days)\n" + "\n".join(
+                    bar_lines
+                )
 
         prompt = f"""Analyze the following portfolio and market data, then provide trade decisions 
 for each symbol in the watchlist.
@@ -81,7 +124,8 @@ for each symbol in the watchlist.
 {quotes_summary}
 
 ## Watchlist
-{', '.join(watchlist)}
+{", ".join(watchlist)}
+{bars_section}
 
 Provide your analysis and trade decisions as JSON."""
 

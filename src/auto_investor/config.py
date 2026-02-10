@@ -8,9 +8,9 @@ from pydantic_settings import BaseSettings
 
 
 class TradingSchedule(BaseModel):
-    market_open_scan: str = "09:35"
-    midday_check: str = "12:00"
-    pre_close_review: str = "15:30"
+    interval_minutes: int = 30
+    market_open: str = "09:35"
+    market_close: str = "15:55"
 
 
 class TradingConfig(BaseModel):
@@ -24,6 +24,9 @@ class RiskConfig(BaseModel):
     daily_loss_limit_pct: float = 3.0
     max_trades_per_day: int = 10
     min_cash_reserve_pct: float = 20.0
+    session_budget: float | None = None  # max capital to deploy per session
+    low_price_threshold: float = 10.0  # stocks below this price get tighter limits
+    low_price_max_position_pct: float = 3.0  # max portfolio % for low-priced stocks
 
 
 class AIConfig(BaseModel):
@@ -35,6 +38,7 @@ class AIConfig(BaseModel):
 class AppConfig(BaseModel):
     trading: TradingConfig = TradingConfig()
     watchlist: list[str] = []
+    crypto_watchlist: list[str] = []
     risk: RiskConfig = RiskConfig()
     ai: AIConfig = AIConfig()
 
