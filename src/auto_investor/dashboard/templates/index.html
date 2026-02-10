@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="sticky-header">
+    <div class="sticky-header" id="sticky-header">
     <div class="header-row">
         <h1>📈 auto-investor</h1>
         <span id="next-analysis" style="font-size:0.85rem; color:#8b949e; font-weight:400;"></span>
@@ -15,7 +15,7 @@
     </div>
     <p class="timestamp" id="live-status" style="margin-bottom: 12px;">Live updates via WebSocket • {% if snapshot %}Last cycle: {{ snapshot["timestamp"][:19].replace("T", " ") }}{% else %}No data yet{% endif %}</p>
 
-    <div class="grid">
+    <div class="grid" id="stats-grid">
         <div class="card">
             <div class="label">Equity</div>
             <div class="value" id="live-equity">
@@ -78,12 +78,10 @@
             </div>
         </div>
     </div>
-
-    {% if equity_history|length > 1 %}
-    <div class="chart-container">
-        <canvas id="equityChart"></canvas>
     </div>
-    {% endif %}
+
+    <div class="chart-container" id="equity-chart-wrapper" {% if equity_history|length <= 1 %}style="display:none"{% endif %}>
+        <canvas id="equityChart"></canvas>
     </div>
 
     <h2>Equity Positions</h2>
@@ -323,7 +321,6 @@
         {% else %}
         window._equityChart = null;
         {% endif %}
-        window._lastEquity = window._equityChart ? window._equityChart.data.datasets[0].data.slice(-1)[0] : 0;
     </script>
     <script>
         async function forceCycle() {
@@ -392,17 +389,17 @@
                         // Append to chart when equity changes
                         if (msg.equity > 0) {
                             if (!window._equityChart) {
+                                const wrapper = document.getElementById('equity-chart-wrapper');
+                                if (wrapper) wrapper.style.display = '';
                                 const now = new Date();
                                 const label = now.toISOString().slice(0, 16).replace('T', ' ');
                                 _createEquityChart([label], [msg.equity]);
-                                window._lastEquity = msg.equity;
-                            } else if (Math.abs(msg.equity - window._lastEquity) > 0.01) {
+                            } else if (Math.abs(msg.equity - window._equityChart.data.datasets[0].data.slice(-1)[0]) > 0.01) {
                                 const now = new Date();
                                 const label = now.toISOString().slice(0, 16).replace('T', ' ');
                                 window._equityChart.data.labels.push(label);
                                 window._equityChart.data.datasets[0].data.push(msg.equity);
                                 window._equityChart.update('none');
-                                window._lastEquity = msg.equity;
                             }
                         }
                     }
@@ -454,6 +451,26 @@
             };
 
             connect();
+        })();
+
+        // Auto-collapse header cards on scroll
+        (function() {
+            const header = document.getElementById('sticky-header');
+            let collapsed = false;
+            let ticking = false;
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => {
+                        const shouldCollapse = window.scrollY > 60;
+                        if (shouldCollapse !== collapsed) {
+                            collapsed = shouldCollapse;
+                            header.classList.toggle('compact', collapsed);
+                        }
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            });
         })();
     </script>
 
