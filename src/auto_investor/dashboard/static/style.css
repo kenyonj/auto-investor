@@ -82,12 +82,64 @@ h2 {
 /* Tables */
 table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     background: #161b22;
     border-radius: 8px;
     overflow: hidden;
     margin-bottom: 24px;
 }
+td, th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Decisions table column widths */
+#decisions-container th:nth-child(1),
+#decisions-container td:nth-child(1) { width: 120px; }  /* Time */
+#decisions-container th:nth-child(2),
+#decisions-container td:nth-child(2) { width: 80px; }   /* Symbol */
+#decisions-container th:nth-child(3),
+#decisions-container td:nth-child(3) { width: 70px; }   /* Action */
+#decisions-container th:nth-child(4),
+#decisions-container td:nth-child(4) { width: 80px; }   /* Confidence */
+#decisions-container th:nth-child(5),
+#decisions-container td:nth-child(5) { width: 60px; }   /* Qty */
+#decisions-container th:nth-child(6),
+#decisions-container td:nth-child(6) { width: auto; }   /* Reasoning - flex */
+#decisions-container th:nth-child(7),
+#decisions-container td:nth-child(7) { width: 70px; }   /* Status */
+
+/* Executions table column widths */
+#executions-container th:nth-child(1),
+#executions-container td:nth-child(1) { width: 120px; }  /* Time */
+#executions-container th:nth-child(2),
+#executions-container td:nth-child(2) { width: 80px; }   /* Symbol */
+#executions-container th:nth-child(3),
+#executions-container td:nth-child(3) { width: 60px; }   /* Side */
+#executions-container th:nth-child(4),
+#executions-container td:nth-child(4) { width: 60px; }   /* Qty */
+#executions-container th:nth-child(5),
+#executions-container td:nth-child(5) { width: 110px; }  /* Amount */
+#executions-container th:nth-child(6),
+#executions-container td:nth-child(6) { width: 70px; }   /* Type */
+#executions-container th:nth-child(7),
+#executions-container td:nth-child(7) { width: 80px; }   /* Status */
+#executions-container th:nth-child(8),
+#executions-container td:nth-child(8) { width: auto; }   /* Order ID - flex */
+
+/* Positions table column widths */
+.positions-table th:nth-child(1),
+.positions-table td:nth-child(1) { width: 80px; }   /* Symbol */
+.positions-table th:nth-child(2),
+.positions-table td:nth-child(2) { width: 80px; }   /* Qty */
+.positions-table th:nth-child(3),
+.positions-table td:nth-child(3) { width: 100px; }  /* Avg Entry */
+.positions-table th:nth-child(4),
+.positions-table td:nth-child(4) { width: 100px; }  /* Current */
+.positions-table th:nth-child(5),
+.positions-table td:nth-child(5) { width: 110px; }  /* Market Value */
+.positions-table th:nth-child(6),
+.positions-table td:nth-child(6) { width: 100px; }  /* P&L */
+.positions-table th:nth-child(7),
+.positions-table td:nth-child(7) { width: auto; }   /* P&L % */
 th {
     background: #21262d;
     text-align: left;
