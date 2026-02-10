@@ -152,7 +152,7 @@
         Recent Decisions
         <span style="font-size:0.75rem; font-weight:400; color:#8b949e;">
             Show
-            <select id="dec-per-page" style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 6px;font-size:0.75rem;">
+            <select id="dec-per-page" autocomplete="off" style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 6px;font-size:0.75rem;">
                 {% for n in [5, 10, 25, 50] %}
                 <option value="{{ n }}" {{ 'selected' if per_page == n else '' }}>{{ n }}</option>
                 {% endfor %}
@@ -217,7 +217,7 @@
         Recent Executions
         <span style="font-size:0.75rem; font-weight:400; color:#8b949e;">
             Show
-            <select id="exec-per-page" style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 6px;font-size:0.75rem;">
+            <select id="exec-per-page" autocomplete="off" style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 6px;font-size:0.75rem;">
                 {% for n in [5, 10, 25, 50] %}
                 <option value="{{ n }}" {{ 'selected' if exec_per_page == n else '' }}>{{ n }}</option>
                 {% endfor %}
@@ -369,6 +369,7 @@
             const nextAnalysis = document.getElementById('next-analysis');
             let countdownTarget = -1;
             let pendingReload = false;
+            const _pageLoadedAt = Date.now();
 
             function fmtTime(s) {
                 if (s <= 0) return '';
@@ -469,6 +470,8 @@
                     }
 
                     if (msg.type === 'new_decisions') {
+                        // Skip if page just loaded (server already rendered fresh data)
+                        if (Date.now() - _pageLoadedAt < 3000) return;
                         // Refresh decisions and executions in-place (no full reload)
                         if (!document.getElementById('decision-modal').classList.contains('active') &&
                             !document.getElementById('chart-modal').classList.contains('active')) {
