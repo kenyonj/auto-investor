@@ -91,7 +91,7 @@ wheels = [
 
 [[package]]
 name = "auto-investor"
-version = "0.1.9"
+version = "0.1.10"
 source = { editable = "." }
 dependencies = [
     { name = "alpaca-py" },

@@ -325,6 +325,17 @@
                 style="background:#da3633;color:#fff;border:none;padding:8px 20px;border-radius:6px;font-weight:600;font-size:0.85rem;cursor:pointer;white-space:nowrap;">
             🔴 Sell All
         </button>
+
+        <div style="width:1px;height:40px;background:#30363d;"></div>
+
+        <div style="flex:1; min-width:200px;">
+            <strong style="color:#f85149;">Reset Database</strong>
+            <p style="font-size:0.8rem; color:#8b949e; margin-top:4px;">Wipe all decisions, executions, snapshots, and loss sale records. Positions are not affected.</p>
+        </div>
+        <button id="reset-db-btn" onclick="confirmResetDb()"
+                style="background:#da3633;color:#fff;border:none;padding:8px 20px;border-radius:6px;font-weight:600;font-size:0.85rem;cursor:pointer;white-space:nowrap;">
+            🗑 Reset DB
+        </button>
     </div>
 
     <!-- Sell All confirmation modal -->
@@ -341,6 +352,25 @@
                 <button id="sell-all-execute-btn" onclick="executeSellAll()" disabled
                         style="background:#da3633;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;opacity:0.5;">
                     Sell All Positions
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset DB confirmation modal -->
+    <div id="reset-db-modal" class="modal-overlay">
+        <div class="modal" style="border-color:#da3633;">
+            <button class="modal-close" onclick="closeResetDbModal()">✕</button>
+            <h3 style="color:#f85149;">⚠ Confirm Database Reset</h3>
+            <p style="margin-bottom:16px;">This will <strong>permanently delete</strong> all decisions, executions, portfolio snapshots, and loss sale records. Your open positions are not affected.</p>
+            <p style="margin-bottom:16px; font-size:0.85rem; color:#8b949e;">Type <strong style="color:#f85149;">RESET</strong> to confirm:</p>
+            <input id="reset-db-confirm-input" type="text" autocomplete="off" placeholder="Type RESET"
+                   style="background:#0d1117;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:8px 12px;font-size:0.9rem;width:100%;margin-bottom:16px;">
+            <div style="display:flex;gap:12px;justify-content:flex-end;">
+                <button onclick="closeResetDbModal()" style="background:#21262d;color:#c9d1d9;border:1px solid #30363d;padding:8px 16px;border-radius:6px;cursor:pointer;">Cancel</button>
+                <button id="reset-db-execute-btn" onclick="executeResetDb()" disabled
+                        style="background:#da3633;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;opacity:0.5;">
+                    Reset Database
                 </button>
             </div>
         </div>
@@ -866,6 +896,17 @@
                     sellBtn.style.opacity = ok ? '1' : '0.5';
                 });
             }
+
+            // Reset DB confirmation input validation
+            const resetInput = document.getElementById('reset-db-confirm-input');
+            const resetBtn = document.getElementById('reset-db-execute-btn');
+            if (resetInput) {
+                resetInput.addEventListener('input', () => {
+                    const ok = resetInput.value.trim().toUpperCase() === 'RESET';
+                    resetBtn.disabled = !ok;
+                    resetBtn.style.opacity = ok ? '1' : '0.5';
+                });
+            }
         })();
 
         function toggleHoldAll() {
@@ -976,6 +1017,43 @@
                     }
                 }).catch(() => {});
             }, 2000);
+        }
+
+        function confirmResetDb() {
+            document.getElementById('reset-db-modal').style.display = 'flex';
+            const inp = document.getElementById('reset-db-confirm-input');
+            inp.value = '';
+            inp.focus();
+            document.getElementById('reset-db-execute-btn').disabled = true;
+            document.getElementById('reset-db-execute-btn').style.opacity = '0.5';
+        }
+
+        function closeResetDbModal() {
+            document.getElementById('reset-db-modal').style.display = 'none';
+        }
+
+        function executeResetDb() {
+            const btn = document.getElementById('reset-db-execute-btn');
+            btn.disabled = true;
+            btn.textContent = 'Resetting…';
+            fetch('/api/reset-db', {method:'POST'})
+                .then(r => r.json())
+                .then(data => {
+                    closeResetDbModal();
+                    btn.textContent = 'Reset Database';
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        loadDecisions(1);
+                        loadExecutions(1);
+                        location.reload();
+                    }
+                })
+                .catch(() => {
+                    closeResetDbModal();
+                    alert('Failed to contact server.');
+                    btn.textContent = 'Reset Database';
+                });
         }
     </script>
 </body>

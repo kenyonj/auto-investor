@@ -480,3 +480,20 @@ def api_positions():
     """Return current live positions."""
     positions = _get_live_positions()
     return {"positions": positions or []}
+
+
+@app.post("/api/reset-db")
+def api_reset_db():
+    """Wipe all decisions, executions, snapshots, and loss sales."""
+    try:
+        db = _get_db()
+        db.execute("DELETE FROM decisions")
+        db.execute("DELETE FROM executions")
+        db.execute("DELETE FROM portfolio_snapshots")
+        db.execute("DELETE FROM loss_sales")
+        db.execute("DELETE FROM scheduler_state")
+        db.commit()
+        db.close()
+        return {"status": "ok"}
+    except Exception as e:
+        return {"error": str(e)}

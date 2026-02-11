@@ -79,6 +79,17 @@ class DataStore:
                 self.conn.execute(f"ALTER TABLE executions ADD COLUMN {col} {col_type}")
         self.conn.commit()
 
+    def reset(self):
+        """Drop all data tables and recreate them."""
+        self.conn.executescript("""
+            DELETE FROM decisions;
+            DELETE FROM executions;
+            DELETE FROM portfolio_snapshots;
+            DELETE FROM loss_sales;
+            DELETE FROM scheduler_state;
+        """)
+        self.conn.commit()
+
     def get_state(self, key: str) -> str | None:
         """Get a scheduler state value."""
         row = self.conn.execute(
